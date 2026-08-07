@@ -6,7 +6,6 @@ function adicionarBotoes() {
             'input[type="checkbox"]'
         );
 
-        // Ignora linhas com 0 ou apenas 1 checkbox
         if (checkboxes.length < 1) return;
 
         row.dataset.botaoChamada = "true";
@@ -28,22 +27,29 @@ function adicionarBotoes() {
 
         atualizarTexto();
 
-        button.addEventListener("click", () => {
-            const todasMarcadas = [...checkboxes].every(
-                checkbox => checkbox.checked
-            );
+        // Atualiza o texto se o usuário clicar individualmente
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener("change", atualizarTexto);
+        });
 
-            checkboxes.forEach(checkbox => {
-                if (todasMarcadas) {
+        button.addEventListener("click", () => {
+
+            if (button.textContent === "Desselecionar todos") {
+
+                checkboxes.forEach(checkbox => {
                     if (checkbox.checked) {
                         checkbox.click();
                     }
-                } else {
+                });
+
+            } else {
+
+                checkboxes.forEach(checkbox => {
                     if (!checkbox.checked) {
                         checkbox.click();
                     }
-                }
-            });
+                });
+            }
 
             atualizarTexto();
         });
