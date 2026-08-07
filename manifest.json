@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Controle de Chamada",
+  "version": "1.0.0",
+  "description": "Marca ou desmarca todas as aulas de um aluno.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
