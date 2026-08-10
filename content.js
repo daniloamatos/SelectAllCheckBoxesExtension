@@ -150,7 +150,7 @@ function iniciar() {
     adicionarBotoes();
 
     // Sincroniza com alterações feitas pelos botões da própria página
-    setInterval(atualizarBotoes, 200);
+    setInterval(atualizarBotoes, 100);
 
     // Continua detectando novas linhas adicionadas pelo React
     const observer = new MutationObserver(() => {
