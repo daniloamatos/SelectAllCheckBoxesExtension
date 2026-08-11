@@ -1,173 +1,548 @@
-function atualizarBotoes() {
-    document
-        .querySelectorAll('tr[data-botao-chamada="true"]')
-        .forEach(row => {
-            const checkboxes = row.querySelectorAll(
-                'input[type="checkbox"]'
-            );
+// ============================================================
+// CHECKBOXES POR LINHA - UNIVERSAL
+// Ativação: CTRL + SHIFT + F10
+// ============================================================
 
-            const button = row.querySelector(".botao-chamada");
+(() => {
 
-            if (!button || checkboxes.length === 0) return;
+    "use strict";
 
-            const todasMarcadas = [...checkboxes].every(
-                checkbox => checkbox.checked
-            );
+    let ativo = false;
 
-            const novoTexto = todasMarcadas
-                ? "✓ Desmarcar todos"
-                : "＋ Marcar todos";
-
-            if (button.textContent !== novoTexto) {
-                button.textContent = novoTexto;
-            }
-        });
-}
+    const BOTAO_CLASS = "botao-chamada-universal";
+    const PROCESSADO_ATTR = "data-checkbox-linha";
 
 
-function adicionarBotoes() {
+    // ========================================================
+    // LOG
+    // ========================================================
 
-    const style = document.createElement("style");
-
-    style.textContent = `
-        .botao-chamada {
-            margin-left: 10px;
-            padding: 3px 8px;
-            border: 1px solid #b8bec8;
-            border-radius: 4px;
-            background: #fff;
-            color: #374151;
-            font-size: 12px;
-            cursor: pointer;
-            white-space: nowrap;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-
-        .botao-chamada:hover {
-            background: #a4a5a5;
-        }
-
-        .botao-chamada:active {
-            background: #e5e7eb;
-        }
-
-        .botao-chamada:focus {
-            outline: none;
-        }
-    `;
-
-    document.head.appendChild(style);
+    function log(...args) {
+        console.log(
+            "%c[Checkbox Linha]",
+            "color:#2563eb;font-weight:bold;",
+            ...args
+        );
+    }
 
 
-    const rows = document.querySelectorAll("tr");
+    // ========================================================
+    // CSS
+    // ========================================================
 
-    console.log("[Chamada] TRs encontradas:", rows.length);
+    function adicionarCSS() {
 
-    rows.forEach(row => {
-        if (row.dataset.botaoChamada === "true") {
+        if (document.getElementById(
+            "checkbox-linha-style"
+        )) {
             return;
         }
 
-        const checkboxes = row.querySelectorAll(
-            'input[type="checkbox"]'
+        const style = document.createElement("style");
+
+        style.id = "checkbox-linha-style";
+
+        style.textContent = `
+            .${BOTAO_CLASS} {
+                margin-left: 10px;
+                padding: 3px 8px;
+                border: 1px solid #b8bec8;
+                border-radius: 4px;
+                background: #fff;
+                color: #374151;
+                font-size: 12px;
+                cursor: pointer;
+                white-space: nowrap;
+                box-shadow: 0 1px 2px rgba(0,0,0,.05);
+            }
+
+            .${BOTAO_CLASS}:hover {
+                background: #a4a5a5;
+            }
+
+            .${BOTAO_CLASS}:active {
+                background: #e5e7eb;
+            }
+
+            .${BOTAO_CLASS}:focus {
+                outline: none;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+
+    // ========================================================
+    // CHECKBOXES DE UM ELEMENTO
+    // ========================================================
+
+    function obterCheckboxes(elemento) {
+
+        return [
+            ...elemento.querySelectorAll(
+                'input[type="checkbox"]'
+            )
+        ];
+
+    }
+
+
+    // ========================================================
+    // DESCOBRIR A "LINHA"
+    // ========================================================
+
+    function encontrarLinha(checkbox) {
+
+        // ----------------------------------------------------
+        // 1. Se estiver em uma tabela, usa TR
+        // ----------------------------------------------------
+
+        const tr = checkbox.closest("tr");
+
+        if (tr) {
+            return tr;
+        }
+
+
+        // ----------------------------------------------------
+        // 2. Para estruturas DIV/etc.
+        //
+        // Procura um ancestral que tenha pelo menos
+        // 2 checkboxes, mas evita subir até BODY/MAIN.
+        // ----------------------------------------------------
+
+        let atual = checkbox.parentElement;
+
+        let melhor = null;
+
+
+        while (
+            atual &&
+            atual !== document.body &&
+            atual !== document.documentElement
+        ) {
+
+            const checkboxes =
+                obterCheckboxes(atual);
+
+
+            // Um possível container de linha
+            if (checkboxes.length >= 2) {
+
+                melhor = atual;
+
+            }
+
+
+            // Se chegou a um elemento que contém
+            // muitos checkboxes, provavelmente subimos
+            // demais e estamos em um container de várias linhas.
+            if (checkboxes.length > 8) {
+
+                break;
+
+            }
+
+
+            atual = atual.parentElement;
+        }
+
+
+        // ----------------------------------------------------
+        // 3. Se achou algum agrupador
+        // ----------------------------------------------------
+
+        if (melhor) {
+            return melhor;
+        }
+
+
+        // ----------------------------------------------------
+        // 4. Fallback:
+        // usa o pai imediato
+        // ----------------------------------------------------
+
+        return checkbox.parentElement;
+    }
+
+
+    // ========================================================
+    // ATUALIZAR TEXTO
+    // ========================================================
+
+    function atualizarTexto(botao, linha) {
+
+        const checkboxes =
+            obterCheckboxes(linha);
+
+
+        if (checkboxes.length === 0) {
+            return;
+        }
+
+
+        const todasMarcadas =
+            checkboxes.every(
+                checkbox => checkbox.checked
+            );
+
+
+        botao.textContent = todasMarcadas
+            ? "✓ Desmarcar todos"
+            : "＋ Marcar todos";
+    }
+
+
+    // ========================================================
+    // CRIAR BOTÃO PARA UMA LINHA
+    // ========================================================
+
+    function adicionarBotaoLinha(linha) {
+
+        if (!linha) {
+            return;
+        }
+
+
+        // Já processada
+        if (
+            linha.getAttribute(
+                PROCESSADO_ATTR
+            ) === "true"
+        ) {
+
+            return;
+        }
+
+
+        const checkboxes =
+            obterCheckboxes(linha);
+
+
+        if (checkboxes.length === 0) {
+            return;
+        }
+
+
+        // ----------------------------------------------------
+        // Marca como processada
+        // ----------------------------------------------------
+
+        linha.setAttribute(
+            PROCESSADO_ATTR,
+            "true"
         );
 
-        console.log(
-            "[Chamada] TR:",
-            row,
+
+        log(
+            "Linha encontrada:",
+            linha,
             "Checkboxes:",
             checkboxes.length
         );
 
-        // Ignora TR sem checkbox
-        if (checkboxes.length < 1) {
+
+        // ----------------------------------------------------
+        // Botão
+        // ----------------------------------------------------
+
+        const botao =
+            document.createElement("button");
+
+
+        botao.type = "button";
+
+        botao.className =
+            BOTAO_CLASS;
+
+
+        atualizarTexto(
+            botao,
+            linha
+        );
+
+
+        // ----------------------------------------------------
+        // Alteração dos checkboxes
+        // ----------------------------------------------------
+
+        checkboxes.forEach(
+            checkbox => {
+
+                checkbox.addEventListener(
+                    "change",
+                    () => {
+
+                        atualizarTexto(
+                            botao,
+                            linha
+                        );
+
+                    }
+                );
+
+            }
+        );
+
+
+        // ----------------------------------------------------
+        // Clique
+        // ----------------------------------------------------
+
+        botao.addEventListener(
+            "click",
+            event => {
+
+                event.preventDefault();
+
+                event.stopPropagation();
+
+
+                const atuais =
+                    obterCheckboxes(linha);
+
+
+                if (atuais.length === 0) {
+                    return;
+                }
+
+
+                const todasMarcadas =
+                    atuais.every(
+                        checkbox =>
+                            checkbox.checked
+                    );
+
+
+                const novoEstado =
+                    !todasMarcadas;
+
+
+                log(
+                    "Botão clicado.",
+                    "Checkboxes:",
+                    atuais.length,
+                    "Novo estado:",
+                    novoEstado
+                );
+
+
+                atuais.forEach(
+                    checkbox => {
+
+                        if (
+                            checkbox.checked !==
+                            novoEstado
+                        ) {
+
+                            checkbox.click();
+
+                        }
+
+                    }
+                );
+
+
+                atualizarTexto(
+                    botao,
+                    linha
+                );
+
+            }
+        );
+
+
+        // ====================================================
+        // INSERIR BOTÃO
+        // ====================================================
+
+        // Se for TR, cria uma nova célula
+        if (
+            linha.tagName === "TR"
+        ) {
+
+            const td =
+                document.createElement("td");
+
+            td.appendChild(botao);
+
+            linha.appendChild(td);
+
+        }
+
+        // Para DIV/etc., coloca no final da linha
+        else {
+
+            linha.appendChild(botao);
+
+        }
+
+
+        log(
+            "✓ Botão criado para linha."
+        );
+
+    }
+
+
+    // ========================================================
+    // ENCONTRAR TODAS AS LINHAS
+    // ========================================================
+
+    function adicionarBotoes() {
+
+        log(
+            "Procurando checkboxes..."
+        );
+
+
+        const checkboxes = [
+            ...document.querySelectorAll(
+                'input[type="checkbox"]'
+            )
+        ];
+
+
+        log(
+            "Total de checkboxes:",
+            checkboxes.length
+        );
+
+
+        if (checkboxes.length === 0) {
+
+            console.warn(
+                "[Checkbox Linha] Nenhum checkbox encontrado."
+            );
+
             return;
         }
 
-        // Marca a TR como processada
-        row.dataset.botaoChamada = "true";
 
-        const td = document.createElement("td");
+        const linhas = new Set();
 
-        const button = document.createElement("button");
 
-        button.type = "button";
-        button.className = "botao-chamada";
+        checkboxes.forEach(
+            checkbox => {
 
-        function atualizarTexto() {
-            const todasMarcadas = [...checkboxes].every(
-                checkbox => checkbox.checked
+                const linha =
+                    encontrarLinha(checkbox);
+
+
+                if (linha) {
+                    linhas.add(linha);
+                }
+
+            }
+        );
+
+
+        log(
+            "Possíveis linhas:",
+            linhas.size
+        );
+
+
+        linhas.forEach(
+            linha => {
+
+                adicionarBotaoLinha(
+                    linha
+                );
+
+            }
+        );
+
+
+        log(
+            "Processamento concluído."
+        );
+
+    }
+
+
+    // ========================================================
+    // INICIAR
+    // ========================================================
+
+    function iniciar() {
+
+        if (ativo) {
+
+            log(
+                "Já está ativado."
             );
 
-            button.textContent = todasMarcadas
-                ? "✓ Desmarcar todos"
-                : "＋ Marcar todos";
+            return;
         }
-        atualizarTexto();
 
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener(
-                "change",
-                atualizarTexto
-            );
-        });
 
-        button.addEventListener("click", () => {
+        ativo = true;
 
-            const todasMarcadas = [...checkboxes].every(
-                checkbox => checkbox.checked
-            );
 
-            if (todasMarcadas) {
+        log(
+            "%cATIVADO!",
+            "color:green;font-weight:bold;font-size:16px;"
+        );
 
-                checkboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        checkbox.click();
-                    }
-                });
 
-            } else {
+        adicionarCSS();
 
-                checkboxes.forEach(checkbox => {
-                    if (!checkbox.checked) {
-                        checkbox.click();
-                    }
-                });
+        adicionarBotoes();
+
+    }
+
+
+    // ========================================================
+    // CTRL + SHIFT + F10
+    // ========================================================
+
+    log(
+        "%cSCRIPT CARREGADO",
+        "color:purple;font-weight:bold;font-size:16px;"
+    );
+
+
+    log(
+        "URL:",
+        location.href
+    );
+
+
+    log(
+        "Aguardando Ctrl + Shift + F10..."
+    );
+
+
+    document.addEventListener(
+        "keydown",
+        event => {
+
+            if (
+                event.ctrlKey &&
+                event.shiftKey &&
+                (
+                    event.key === "F10" ||
+                    event.code === "F10"
+                )
+            ) {
+
+                event.preventDefault();
+
+
+                log(
+                    "%cCTRL + SHIFT + F10 DETECTADO",
+                    "color:red;font-weight:bold;"
+                );
+
+
+                iniciar();
 
             }
 
-            atualizarTexto();
-        });
+        },
+        true
+    );
 
-        td.appendChild(button);
-        row.appendChild(td);
-    });
-}
-
-
-// Executa quando o DOM estiver pronto
-function iniciar() {
-    adicionarBotoes();
-
-    // Sincroniza com alterações feitas pelos botões da própria página
-    setInterval(atualizarBotoes, 100);
-
-    // Continua detectando novas linhas adicionadas pelo React
-    const observer = new MutationObserver(() => {
-        adicionarBotoes();
-    });
-
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-
-    console.log("[Chamada] Observer iniciado");
-}
-
-
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", iniciar);
-} else {
-    iniciar();
-}
+})();
